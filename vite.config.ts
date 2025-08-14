@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite'
-import path from 'path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from "@tailwindcss/vite"
 
@@ -7,8 +6,22 @@ import tailwindcss from "@tailwindcss/vite"
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      {
+        find: "@",
+        replacement: "/src"
+      }
+    ]
   },
+  server: {
+    proxy: {
+      '/api/twse': {
+        target: 'https://openapi.twse.com.tw/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/twse/, ''),
+        secure: true,
+        followRedirects: true
+      }
+    }
+  }
 })
