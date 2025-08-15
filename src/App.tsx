@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react"
-import { RefreshCw, Database, Clock, LayoutGrid, BarChart3 } from "lucide-react"
+import { useState, useMemo, useCallback, useRef } from "react"
+import { RefreshCw, Database, Clock } from "lucide-react"
 
 import { SearchBar } from "@/components/SearchBar"
 import { StockList } from "@/components/StockList"
@@ -9,13 +9,14 @@ import { NetworkStatus } from "@/components/NetworkStatus"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { Button } from "@/components/ui/button"
 
-import { ApiProvider } from "@/contexts/ApiContext"
-import { useStocks } from "@/hooks/useStocks"
+import { StockProvider } from "@/contexts/SimpleStockContext"
+import { useStocks } from "@/hooks/useSimpleStocks"
 
 function StockApp() {
   const [activeSearchQuery, setActiveSearchQuery] = useState("")
+  const [searchInputValue, setSearchInputValue] = useState("")
   const [isSearching, setIsSearching] = useState(false)
-  const [viewMode, setViewMode] = useState<'cards' | 'bars'>('bars')
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const {
     stocks: allStocks,
@@ -28,15 +29,27 @@ function StockApp() {
     clearError
   } = useStocks()
 
-  // 處理搜尋
+  // 處理搜尋（不使用防抖動，因為是手動觸發）
   const handleSearch = useCallback((query: string) => {
     setIsSearching(true)
     
-    // 模擬搜尋延遲（實際上是即時的，但提供視覺反饋）
+    // 模擬搜尋延遲，提供視覺反饋
     setTimeout(() => {
-      setActiveSearchQuery(query)
+      setActiveSearchQuery(query.trim())
       setIsSearching(false)
     }, 100)
+  }, [])
+
+  // 處理搜尋欄位變化
+  const handleInputChange = useCallback((value: string) => {
+    setSearchInputValue(value)
+  }, [])
+
+  // 清空搜尋
+  const handleClearSearch = useCallback(() => {
+    setSearchInputValue("")
+    setActiveSearchQuery("")
+    setIsSearching(false)
   }, [])
 
   // 過濾股票數據（只在實際搜尋時過濾）
@@ -63,9 +76,6 @@ function StockApp() {
         {/* 標題 */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">台股即時行情</h1>
-          <p className="text-muted-foreground">
-            使用 Axios + Context 架構的即時台灣證券交易所資料
-          </p>
           
           {/* 數據狀態指示器 */}
           <div className="flex items-center justify-center gap-4 mt-4 text-sm text-muted-foreground flex-wrap">
@@ -93,38 +103,15 @@ function StockApp() {
           </div>
         </div>
 
-        {/* 搜尋欄和視圖切換 */}
-        <div className="flex flex-col items-center space-y-4 mb-8">
+        {/* 搜尋欄 */}
+        <div className="flex justify-center mb-8">
           <SearchBar
             onSearch={handleSearch}
+            value={searchInputValue}
+            onChange={handleInputChange}
             placeholder="輸入股票代號或名稱..."
             disabled={loading || isSearching}
           />
-          
-          {/* 視圖切換按鈕 */}
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">顯示模式：</span>
-            <div className="flex border rounded-lg p-1">
-              <Button
-                variant={viewMode === 'bars' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('bars')}
-                className="flex items-center space-x-1"
-              >
-                <BarChart3 className="h-4 w-4" />
-                <span>條列</span>
-              </Button>
-              <Button
-                variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('cards')}
-                className="flex items-center space-x-1"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                <span>卡片</span>
-              </Button>
-            </div>
-          </div>
         </div>
 
         {/* 錯誤提示 */}
@@ -140,7 +127,7 @@ function StockApp() {
 
         {/* 主要內容區域 */}
         {loading && !allStocks.length ? (
-          <LoadingState variant={viewMode} message="正在載入股票數據..." />
+          <LoadingState message="正在載入股票數據..." />
         ) : (
           <>
             {/* 加載指示器（有數據時顯示在頂部） */}
@@ -156,13 +143,11 @@ function StockApp() {
             {/* 股票列表 */}
             <StockList 
               stocks={filteredStocks} 
-              loading={isSearching} 
-              viewMode={viewMode}
-              showEmptyState={!activeSearchQuery}
+              loading={isSearching}
             />
             
-            {/* 搜尋無結果提示 */}
-            {activeSearchQuery && !isSearching && filteredStocks.length === 0 && allStocks.length > 0 && (
+            {/* 搜尋無結果提示 - 只有在有股票資料但搜尋無結果時顯示 */}
+            {activeSearchQuery && !isSearching && filteredStocks.length === 0 && allStocks.length > 0 && !loading && !error && (
               <div className="text-center py-8">
                 <div className="text-muted-foreground text-lg mb-2">
                   找不到「{activeSearchQuery}」相關的股票
@@ -170,7 +155,7 @@ function StockApp() {
                 <p className="text-sm text-muted-foreground mb-4">
                   請嘗試其他關鍵字或檢查拼寫
                 </p>
-                <Button variant="outline" onClick={() => handleSearch("")}>
+                <Button variant="outline" onClick={handleClearSearch}>
                   顯示所有股票
                 </Button>
               </div>
@@ -193,8 +178,8 @@ function StockApp() {
           </div>
         )}
         
-        {/* 空狀態 */}
-        {!loading && !error && allStocks.length === 0 && (
+        {/* 空狀態 - 只有在沒有搜尋關鍵字且真的沒有資料時才顯示 */}
+        {!loading && !error && allStocks.length === 0 && !activeSearchQuery && (
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold mb-2">無股票資料</h3>
             <p className="text-muted-foreground mb-4">
@@ -214,9 +199,9 @@ function StockApp() {
 function App() {
   return (
     <ErrorBoundary>
-      <ApiProvider>
+      <StockProvider>
         <StockApp />
-      </ApiProvider>
+      </StockProvider>
     </ErrorBoundary>
   )
 }

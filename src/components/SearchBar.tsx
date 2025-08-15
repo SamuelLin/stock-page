@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, memo } from "react"
 import type { FormEvent, KeyboardEvent } from "react"
 import { Search, X } from "lucide-react"
 
@@ -9,23 +9,37 @@ interface SearchBarProps {
   onSearch: (query: string) => void
   placeholder?: string
   disabled?: boolean
-  defaultValue?: string
+  value?: string
+  onChange?: (value: string) => void
 }
 
-export function SearchBar({ 
+export const SearchBar = memo(function SearchBar({ 
   onSearch, 
   placeholder = "輸入股票代號或名稱...", 
   disabled = false,
-  defaultValue = ""
+  value,
+  onChange
 }: SearchBarProps) {
-  const [query, setQuery] = useState(defaultValue)
+  const [internalQuery, setInternalQuery] = useState("")
+  
+  // 使用受控模式或非受控模式
+  const isControlled = value !== undefined
+  const currentQuery = isControlled ? value : internalQuery
+
+  const handleQueryChange = (newValue: string) => {
+    if (isControlled && onChange) {
+      onChange(newValue)
+    } else {
+      setInternalQuery(newValue)
+    }
+  }
 
   const handleSearch = () => {
-    onSearch(query.trim())
+    onSearch(currentQuery.trim())
   }
 
   const handleClear = () => {
-    setQuery("")
+    handleQueryChange("")
     onSearch("")
   }
 
@@ -48,13 +62,13 @@ export function SearchBar({
           <Input
             type="text"
             placeholder={placeholder}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={currentQuery}
+            onChange={(e) => handleQueryChange(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={disabled}
             className="pl-10 pr-10"
           />
-          {query && (
+          {currentQuery && (
             <Button
               type="button"
               variant="ghost"
@@ -70,7 +84,7 @@ export function SearchBar({
         </div>
         <Button 
           type="submit" 
-          disabled={disabled || !query.trim()}
+          disabled={disabled || !currentQuery.trim()}
           className="px-6"
         >
           搜尋
@@ -83,4 +97,4 @@ export function SearchBar({
       </p>
     </form>
   )
-}
+})

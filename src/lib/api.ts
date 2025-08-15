@@ -2,19 +2,13 @@ import type { Stock } from "@/types/stock"
 
 // API 配置
 const API_CONFIG = {
-  // CORS 代理列表（備用方案）
-  CORS_PROXIES: [
-    'https://api.allorigins.win/get?url=',
-    'https://cors-anywhere.herokuapp.com/',
-    'https://api.codetabs.com/v1/proxy?quest='
-  ],
-  TWSE_BASE_URL: 'https://openapi.twse.com.tw/v1',
+  BASE_URL: '/api/twse',
   ENDPOINTS: {
     STOCK_DAY_ALL: '/exchangeReport/STOCK_DAY_ALL'
   },
-  TIMEOUT: 15000, // 15 秒超時（代理服務較慢）
-  RETRY_ATTEMPTS: 2,
-  RETRY_DELAY: 2000 // 2 秒重試延遲
+  TIMEOUT: 10000, // 10 秒超時
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000 // 1 秒重試延遲
 } as const
 
 // API 錯誤類型
@@ -52,9 +46,8 @@ async function fetchWithRetry(
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
-      mode: 'cors',
       headers: {
-        'Accept': 'application/json',
+        'Content-Type': 'application/json',
         ...options.headers,
       },
     })
@@ -107,54 +100,23 @@ export const stockApi = {
       throw new ApiError('無網路連線，請檢查網路設定', 0, 'NO_NETWORK')
     }
 
-    const targetUrl = `${API_CONFIG.TWSE_BASE_URL}${API_CONFIG.ENDPOINTS.STOCK_DAY_ALL}`
-    
-    // 嘗試使用不同的 CORS 代理
-    for (let i = 0; i < API_CONFIG.CORS_PROXIES.length; i++) {
-      try {
-        const proxy = API_CONFIG.CORS_PROXIES[i]
-        let proxyUrl: string
-        
-        if (proxy.includes('allorigins.win')) {
-          proxyUrl = `${proxy}${encodeURIComponent(targetUrl)}`
-        } else {
-          proxyUrl = `${proxy}${targetUrl}`
-        }
-        
-        console.log(`嘗試代理 ${i + 1}:`, proxy.split('//')[1].split('/')[0])
-        
-        const response = await fetchWithRetry(proxyUrl)
-        let data: any
-        
-        if (proxy.includes('allorigins.win')) {
-          const proxyData = await response.json()
-          if (!proxyData.contents) {
-            throw new Error('代理返回格式錯誤')
-          }
-          data = JSON.parse(proxyData.contents)
-        } else {
-          data = await response.json()
-        }
+    try {
+      const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.STOCK_DAY_ALL}`
+      const response = await fetchWithRetry(url)
+      const data = await response.json()
 
-        // 驗證數據格式
-        if (!Array.isArray(data)) {
-          throw new Error('數據格式不正確')
-        }
-
-        console.log(`✅ 代理 ${i + 1} 成功，獲取 ${data.length} 筆資料`)
-        return data as Stock[]
-        
-      } catch (error) {
-        console.log(`❌ 代理 ${i + 1} 失敗:`, error instanceof Error ? error.message : error)
-        
-        // 如果是最後一個代理也失敗了
-        if (i === API_CONFIG.CORS_PROXIES.length - 1) {
-          throw new ApiError('所有代理服務都無法使用，請稍後再試', 0, 'ALL_PROXIES_FAILED')
-        }
+      // 驗證數據格式
+      if (!Array.isArray(data)) {
+        throw new ApiError('API 返回的數據格式不正確', 0, 'INVALID_DATA')
       }
-    }
 
-    throw new ApiError('獲取股票資料失敗', 0, 'FETCH_ERROR')
+      return data as Stock[]
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      }
+      throw new ApiError('獲取股票資料失敗', 0, 'FETCH_ERROR')
+    }
   },
 
   /**

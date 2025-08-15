@@ -10,7 +10,8 @@
       "mcp__context7__get-library-docs",
       "WebSearch",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(grep:*)"
     ],
     "defaultMode": "acceptEdits"
   }
