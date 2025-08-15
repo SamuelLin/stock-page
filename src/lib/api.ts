@@ -2,7 +2,7 @@ import type { Stock } from "@/types/stock"
 
 // API 配置
 const API_CONFIG = {
-  BASE_URL: '/api/twse',
+  BASE_URL: '/api/twse', // 使用 Amplify 重定向規則
   ENDPOINTS: {
     STOCK_DAY_ALL: '/exchangeReport/STOCK_DAY_ALL'
   },
