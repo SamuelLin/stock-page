@@ -41,9 +41,13 @@ export function useStocks(): UseStocksReturn {
     return cacheManager.has(CACHE_KEYS.ALL_STOCKS)
   }, [])
 
-  // 最後更新時間（簡化版，實際應該存在 state 或 cache 中）
+  // 最後更新時間（從快取或當前時間獲取）
   const lastUpdated = useMemo(() => {
-    return stocks.length > 0 ? new Date() : null
+    if (stocks.length === 0) return null
+    
+    // 嘗試從快取獲取時間戳
+    const cachedTimestamp = cacheManager.get<number>(`${CACHE_KEYS.ALL_STOCKS}_timestamp`)
+    return cachedTimestamp ? new Date(cachedTimestamp) : new Date()
   }, [stocks.length])
 
   // 獲取股票數據
@@ -65,8 +69,9 @@ export function useStocks(): UseStocksReturn {
           console.log('從 API 獲取股票資料')
           const freshData = await stockApi.getAllStocks()
           
-          // 存入快取
+          // 存入快取並記錄時間戳
           cacheManager.set(CACHE_KEYS.ALL_STOCKS, freshData)
+          cacheManager.set(`${CACHE_KEYS.ALL_STOCKS}_timestamp`, Date.now())
           
           return freshData
         },
@@ -163,9 +168,10 @@ export function useStockFilter(stocks: Stock[], initialQuery = '') {
     )
   }, [stocks, initialQuery])
 
-  const setSearchQuery = useCallback(() => {
+  const setSearchQuery = useCallback((newQuery: string) => {
     // 這裡可以添加搜尋歷史記錄等邏輯
-    // 現在只是簡單返回過濾結果
+    // 目前只提供基本的 setter 功能
+    console.log('搜尋查詢更新:', newQuery)
   }, [])
 
   return {

@@ -2,9 +2,7 @@ import type { Stock } from "@/types/stock"
 
 // API 配置
 const API_CONFIG = {
-  BASE_URL: import.meta.env.DEV 
-    ? '/api/twse' 
-    : 'https://cors-anywhere.herokuapp.com/https://openapi.twse.com.tw/v1',
+  BASE_URL: '/api/twse',
   ENDPOINTS: {
     STOCK_DAY_ALL: '/exchangeReport/STOCK_DAY_ALL'
   },

@@ -90,8 +90,6 @@ function StockApp() {
                 </span>
               </div>
             )}
-
-
           </div>
         </div>
 
@@ -156,7 +154,12 @@ function StockApp() {
             )}
             
             {/* 股票列表 */}
-            <StockList stocks={filteredStocks} loading={isSearching} viewMode={viewMode} />
+            <StockList 
+              stocks={filteredStocks} 
+              loading={isSearching} 
+              viewMode={viewMode}
+              showEmptyState={!activeSearchQuery}
+            />
             
             {/* 搜尋無結果提示 */}
             {activeSearchQuery && !isSearching && filteredStocks.length === 0 && allStocks.length > 0 && (
