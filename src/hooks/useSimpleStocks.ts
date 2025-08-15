@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useStockContext } from '@/contexts/SimpleStockContext'
+import { useStockContext } from '@/hooks/useStockContext'
 
 export function useStocks() {
   const {

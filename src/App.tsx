@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { RefreshCw, Database, Clock } from "lucide-react"
 
 import { SearchBar } from "@/components/SearchBar"
@@ -16,7 +16,6 @@ function StockApp() {
   const [activeSearchQuery, setActiveSearchQuery] = useState("")
   const [searchInputValue, setSearchInputValue] = useState("")
   const [isSearching, setIsSearching] = useState(false)
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const {
     stocks: allStocks,

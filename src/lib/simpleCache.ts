@@ -5,7 +5,7 @@ interface CacheItem<T> {
 }
 
 class SimpleCache {
-  private cache = new Map<string, CacheItem<any>>()
+  private cache = new Map<string, CacheItem<unknown>>()
   private readonly TTL = 5 * 60 * 1000 // 5分鐘
 
   set<T>(key: string, data: T): void {

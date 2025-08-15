@@ -1,21 +1,9 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { useState, useCallback, ReactNode } from 'react'
 
 import { stockApi } from '@/lib/api'
 import { cache } from '@/lib/simpleCache'
 import type { Stock } from '@/types/stock'
-
-interface StockContextType {
-  stocks: Stock[]
-  loading: boolean
-  error: string | null
-  lastUpdated: Date | null
-  isFromCache: boolean
-  fetchStocks: () => Promise<void>
-  refreshStocks: () => Promise<void>
-  clearError: () => void
-}
-
-const StockContext = createContext<StockContextType | null>(null)
+import { StockContext } from '@/contexts/StockContext'
 
 export function StockProvider({ children }: { children: ReactNode }) {
   const [stocks, setStocks] = useState<Stock[]>([])
@@ -85,10 +73,3 @@ export function StockProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useStockContext() {
-  const context = useContext(StockContext)
-  if (!context) {
-    throw new Error('useStockContext 必須在 StockProvider 內使用')
-  }
-  return context
-}
