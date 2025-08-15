@@ -3,7 +3,11 @@ import { AlertCircle, Wifi, WifiOff, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
-import type { ApiError } from '@/contexts/ApiContext'
+// ApiError 定義移動到這裡因為不再使用 ApiContext
+interface ApiError {
+  message: string
+  code?: string
+}
 
 interface ErrorAlertProps {
   error: ApiError

@@ -1,9 +1,13 @@
-import { useState, useCallback, ReactNode } from 'react'
+import { useState, useCallback } from 'react'
+import type { ReactNode } from 'react'
 
 import { stockApi } from '@/lib/api'
 import { cache } from '@/lib/simpleCache'
 import type { Stock } from '@/types/stock'
 import { StockContext } from '@/contexts/StockContext'
+
+// Re-export StockContext so it can be imported from this file
+export { StockContext }
 
 export function StockProvider({ children }: { children: ReactNode }) {
   const [stocks, setStocks] = useState<Stock[]>([])

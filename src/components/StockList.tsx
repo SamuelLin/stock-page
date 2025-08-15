@@ -34,8 +34,8 @@ const StockItem = memo(function StockItem({ stock, index }: { stock: Stock; inde
             <div className="font-mono">
               {stock.Change ? (parseFloat(stock.Change) > 0 ? '+' : '') + parseFloat(stock.Change).toFixed(2) : '--'}
             </div>
-            <div className="text-xs">
-              {stock.ChangePrice && stock.ChangePrice !== '0.00' ? (parseFloat(stock.ChangePrice) > 0 ? '+' : '') + parseFloat(stock.ChangePrice).toFixed(2) : ''}
+            <div className="text-xs text-muted-foreground">
+              漲跌
             </div>
           </div>
           
@@ -68,7 +68,6 @@ const StockItem = memo(function StockItem({ stock, index }: { stock: Stock; inde
                   : 'text-muted-foreground'
             }`}>
               {stock.Change ? (parseFloat(stock.Change) > 0 ? '+' : '') + parseFloat(stock.Change).toFixed(2) : '--'}
-              {stock.ChangePrice && stock.ChangePrice !== '0.00' ? ' (' + (parseFloat(stock.ChangePrice) > 0 ? '+' : '') + parseFloat(stock.ChangePrice).toFixed(2) + ')' : ''}
             </div>
           </div>
         </div>

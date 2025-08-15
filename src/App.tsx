@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react"
 import { RefreshCw, Database, Clock } from "lucide-react"
 
 import { SearchBar } from "@/components/SearchBar"
+import type { Stock } from "@/types/stock"
 import { StockList } from "@/components/StockList"
 import { ErrorAlert } from "@/components/ErrorAlert"
 import { LoadingState } from "@/components/LoadingState"
@@ -58,7 +59,7 @@ function StockApp() {
     }
     
     const query = activeSearchQuery.toLowerCase()
-    return allStocks.filter(stock => 
+    return allStocks.filter((stock: Stock) => 
       stock.Code.toLowerCase().includes(query) ||
       stock.Name.toLowerCase().includes(query)
     )
@@ -117,7 +118,7 @@ function StockApp() {
         {error && (
           <div className="mb-6">
             <ErrorAlert
-              error={error}
+              error={{ message: error }}
               onRetry={handleRetry}
               onDismiss={clearError}
             />
