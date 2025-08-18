@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+This is a Taiwan Stock Market Information System that provides real-time stock data from both TWSE (Taiwan Stock Exchange) and TPEx (Taipei Exchange) markets.
+
+### Key Features
+- **Unified Stock Search**: Search across both TWSE (上市) and TPEx (上櫃) stocks
+- **Manual Search Mode**: Search-first UX pattern with manual trigger (button/Enter key)
+- **Performance Optimized**: Cached search results, React.memo optimizations, efficient filtering
+- **Responsive Design**: Mobile-first approach with adaptive layouts
+- **Real-time Data**: Direct API integration with Taiwan stock exchanges
+
 ## Development Commands
 
 ### Core Commands
@@ -24,19 +35,119 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Component Variants**: class-variance-authority (cva)
 - **Icons**: Lucide React
 - **Linting**: ESLint with TypeScript and React plugins
+- **State Management**: React Context API with optimized providers
+- **Performance**: React.memo, useCallback, useMemo for optimization
 
 ### Directory Structure
 ```
 src/
 ├── components/
-│   └── ui/           # shadcn/ui components (Button, etc.)
+│   ├── ui/              # shadcn/ui components (Button, Input, etc.)
+│   ├── SearchBar.tsx    # Search input with manual trigger
+│   ├── StockList.tsx    # Optimized stock display component
+│   ├── LoadingState.tsx # Loading states with variants
+│   └── ErrorBoundary.tsx # Error handling component
+├── contexts/
+│   └── StockContext.tsx # Unified stock data management
+├── hooks/
+│   └── useOptimizedSearch.ts # Search optimization with caching
 ├── lib/
-│   └── utils.ts      # Utility functions (cn for className merging)
-├── assets/           # Static assets
-├── App.tsx           # Main application component
-├── main.tsx          # Application entry point
-└── index.css         # Global styles and Tailwind directives
+│   ├── api.ts           # API layer for TWSE/TPEx integration
+│   ├── simpleCache.ts   # Simple caching implementation
+│   └── utils.ts         # Utility functions (cn for className merging)
+├── types/
+│   └── stock.ts         # TypeScript interfaces for stock data
+├── App.tsx              # Main application component
+├── main.tsx             # Application entry point
+└── index.css            # Global styles and Tailwind directives
 ```
+
+### API Integration
+
+#### Data Sources
+- **TWSE API**: `/api/twse/exchangeReport/STOCK_DAY_ALL` (上市股票)
+- **TPEx API**: `/api/tpex/tpex_mainboard_daily_close_quotes` (上櫃股票)
+
+#### Proxy Configuration
+```typescript
+// vite.config.ts
+'/api/twse': {
+  target: 'https://www.twse.com.tw',
+  changeOrigin: true,
+  rewrite: (path) => path.replace(/^\/api\/twse/, ''),
+},
+'/api/tpex': {
+  target: 'https://www.tpex.org.tw/openapi/v1',
+  changeOrigin: true,
+  rewrite: (path) => path.replace(/^\/api\/tpex/, ''),
+}
+```
+
+#### Data Flow
+1. **Parallel API Calls**: Both TWSE and TPEx APIs called simultaneously
+2. **Data Transformation**: Raw API responses transformed to unified `Stock` interface
+3. **Error Resilience**: If one API fails, system continues with available data
+4. **Caching Layer**: Results cached to improve performance and reduce API calls
+
+### Performance Optimizations
+
+#### React Optimizations
+- **React.memo**: All components wrapped with memo for shallow comparison
+- **useCallback**: All event handlers and functions memoized
+- **useMemo**: Expensive calculations (search results, stats) cached
+- **Custom memo comparisons**: SearchBar uses custom comparison for optimal re-renders
+
+#### Search Optimizations
+- **Search Cache**: Map-based caching with size limits (50 entries)
+- **Manual Trigger**: Search only executes on button click or Enter key
+- **Efficient Filtering**: Uses for-loop instead of array methods for better performance
+- **Result Limiting**: Maximum 100 results to prevent UI lag
+- **Priority Matching**: Exact matches > starts with > contains
+
+#### Context Optimizations
+- **Memoized Context Value**: Prevents unnecessary provider re-renders
+- **Stable Function References**: All context functions use useCallback
+- **Lazy Loading**: Stock data loaded only when needed
+
+### TypeScript Architecture
+
+#### Core Interfaces
+```typescript
+// Unified stock interface
+interface Stock {
+  date: string
+  code: string
+  name: string
+  closingPrice: string
+  change: string
+  openingPrice: string
+  highestPrice: string
+  lowestPrice: string
+  tradeVolume: string
+  tradeValue: string
+  transaction: string
+  source: 'twse' | 'tpex'
+}
+
+// Internal API response types
+interface TwseApiResponse { /* TWSE specific fields */ }
+interface TpexApiResponse { /* TPEx specific fields */ }
+```
+
+### Component Patterns
+
+#### Search-First UX Pattern
+- **Initial State**: Shows search prompt, no data displayed
+- **Search Trigger**: Manual activation via button or Enter key
+- **Loading States**: Inline loading indicators during search
+- **Result Display**: Shows filtered results with clear statistics
+- **Error Handling**: Graceful degradation with retry options
+
+#### Performance-First Design
+- **Minimal Re-renders**: Aggressive use of React optimization patterns
+- **Efficient State Updates**: Batched updates and stable references
+- **Smart Caching**: Multiple caching layers (search, API, context)
+- **Responsive Loading**: Non-blocking UI updates with setTimeout
 
 ### Key Configurations
 - **Path Aliases**: `@/*` maps to `./src/*` (configured in both tsconfig.json and vite.config.ts)
@@ -44,20 +155,10 @@ src/
 - **TypeScript**: Project references pattern with separate configs for app and node
 - **ESLint**: Modern flat config with React hooks and refresh plugins
 
-### Component Architecture
-- Uses shadcn/ui design system with consistent component patterns
-- Components use `cn()` utility for className merging (clsx + tailwind-merge)
-- Button component demonstrates the pattern: cva for variants, Radix Slot for composition
-- TypeScript interfaces follow React.ComponentProps pattern for extensibility
-
-### Styling Approach
-- Tailwind CSS v4 with CSS variables for theming
-- Components use cva for consistent variant-based styling
-- Focus on accessibility with proper focus-visible states and ARIA support
-- Dark mode ready with CSS variable-based color system
-
 ### Development Patterns
-- Functional components with TypeScript
-- Import aliases (@/ prefix) for clean import paths
-- Composition over inheritance (Radix Slot pattern)
-- Props destructuring with TypeScript interface extensions
+- **Functional Components**: All components use function syntax with TypeScript
+- **Import Aliases**: Consistent use of `@/` prefix for clean import paths
+- **Composition Pattern**: Leverages Radix Slot pattern for component composition
+- **Type Safety**: Strict TypeScript with proper interface definitions
+- **Performance First**: Every component and hook optimized for minimal re-renders
+- **Error Boundaries**: Comprehensive error handling at component and API levels

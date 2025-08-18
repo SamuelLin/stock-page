@@ -1,22 +1,18 @@
-import { useState, useMemo, useCallback } from "react"
-import { RefreshCw, Database, Clock } from "lucide-react"
+import { useState, useCallback, useMemo } from "react"
+import { Database, Clock } from "lucide-react"
 
 import { SearchBar } from "@/components/SearchBar"
-import type { Stock } from "@/types/stock"
 import { StockList } from "@/components/StockList"
-import { ErrorAlert } from "@/components/ErrorAlert"
 import { LoadingState } from "@/components/LoadingState"
-import { NetworkStatus } from "@/components/NetworkStatus"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { Button } from "@/components/ui/button"
 
-import { StockProvider } from "@/contexts/SimpleStockContext"
-import { useStocks } from "@/hooks/useSimpleStocks"
+import { StockProvider, useStocks } from "@/contexts/StockContext"
+import { useOptimizedSearch } from "@/hooks/useOptimizedSearch"
 
 function StockApp() {
-  const [activeSearchQuery, setActiveSearchQuery] = useState("")
   const [searchInputValue, setSearchInputValue] = useState("")
-  const [isSearching, setIsSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
   
   const {
     stocks: allStocks,
@@ -24,60 +20,48 @@ function StockApp() {
     error,
     lastUpdated,
     isFromCache,
-    totalCount,
     refreshStocks,
-    clearError
+    clearError,
+    ensureStocksLoaded
   } = useStocks()
 
-  // 處理搜尋（不使用防抖動，因為是手動觸發）
-  const handleSearch = useCallback((query: string) => {
-    setIsSearching(true)
+  const { filteredStocks, isSearching, currentQuery, executeSearch, clearSearch } = useOptimizedSearch(allStocks)
+  const handleSearch = useCallback(async (query: string) => {
+    setHasSearched(true)
     
-    // 模擬搜尋延遲，提供視覺反饋
-    setTimeout(() => {
-      setActiveSearchQuery(query.trim())
-      setIsSearching(false)
-    }, 100)
-  }, [])
-
-  // 處理搜尋欄位變化
+    try {
+      const latestStocks = await ensureStocksLoaded()
+      executeSearch(query, latestStocks)
+    } catch (err) {
+      console.error('載入股票資料失敗:', err)
+    }
+  }, [ensureStocksLoaded, executeSearch])
   const handleInputChange = useCallback((value: string) => {
     setSearchInputValue(value)
   }, [])
-
-  // 清空搜尋
   const handleClearSearch = useCallback(() => {
     setSearchInputValue("")
-    setActiveSearchQuery("")
-    setIsSearching(false)
-  }, [])
+    setHasSearched(false)
+    clearSearch()
+  }, [clearSearch])
 
-  // 過濾股票數據（只在實際搜尋時過濾）
-  const filteredStocks = useMemo(() => {
-    if (!activeSearchQuery.trim()) {
-      return allStocks
-    }
-    
-    const query = activeSearchQuery.toLowerCase()
-    return allStocks.filter((stock: Stock) => 
-      stock.Code.toLowerCase().includes(query) ||
-      stock.Name.toLowerCase().includes(query)
-    )
-  }, [allStocks, activeSearchQuery])
-
-  const handleRetry = async () => {
+  const handleRetry = useCallback(async () => {
     clearError()
     await refreshStocks()
-  }
+  }, [clearError, refreshStocks])
+  const stockStats = useMemo(() => ({
+    total: allStocks.length,
+    filtered: filteredStocks.length,
+    hasStocks: allStocks.length > 0
+  }), [allStocks.length, filteredStocks.length])
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        {/* 標題 */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">台股即時行情</h1>
+          <p className="text-muted-foreground text-sm">整合上市(TWSE)與上櫃(TPEX)股票資料</p>
           
-          {/* 數據狀態指示器 */}
           <div className="flex items-center justify-center gap-4 mt-4 text-sm text-muted-foreground flex-wrap">
             {lastUpdated && (
               <div className="flex items-center gap-1">
@@ -93,105 +77,109 @@ function StockApp() {
               </div>
             )}
             
-            {totalCount > 0 && (
+            {stockStats.hasStocks && (
               <div className="flex items-center gap-1">
                 <span>
-                  顯示 {filteredStocks.length} / {totalCount} 檔股票
+                  顯示 {stockStats.filtered} / {stockStats.total} 檔股票
                 </span>
               </div>
             )}
           </div>
         </div>
 
-        {/* 搜尋欄 */}
         <div className="flex justify-center mb-8">
           <SearchBar
             onSearch={handleSearch}
             value={searchInputValue}
             onChange={handleInputChange}
-            placeholder="輸入股票代號或名稱..."
+            placeholder="請輸入股票代號或名稱開始搜尋..."
             disabled={loading || isSearching}
           />
         </div>
 
-        {/* 錯誤提示 */}
-        {error && (
-          <div className="mb-6">
-            <ErrorAlert
-              error={{ message: error }}
-              onRetry={handleRetry}
-              onDismiss={clearError}
-            />
+        {!hasSearched && !loading && (
+          <div className="text-center py-12">
+            <div className="max-w-md mx-auto">
+              <h3 className="text-xl font-semibold mb-4">🔍 開始搜尋股票</h3>
+              <p className="text-muted-foreground mb-6">
+                輸入股票代號（如：2330）或公司名稱（如：台積電）來查找股票資訊
+              </p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-card p-3 rounded-lg border">
+                  <div className="font-medium mb-1">上市股票</div>
+                  <div className="text-muted-foreground">台灣證券交易所</div>
+                </div>
+                <div className="bg-card p-3 rounded-lg border">
+                  <div className="font-medium mb-1">上櫃股票</div>
+                  <div className="text-muted-foreground">櫃買中心</div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* 主要內容區域 */}
-        {loading && !allStocks.length ? (
-          <LoadingState message="正在載入股票數據..." />
-        ) : (
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <div className="text-destructive mb-2">錯誤：{error}</div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleRetry}>
+                重試
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearError}>
+                忽略
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {hasSearched && (
           <>
-            {/* 加載指示器（有數據時顯示在頂部） */}
-            {(loading || isSearching) && allStocks.length > 0 && (
-              <div className="flex justify-center mb-4">
-                <LoadingState 
-                  variant="inline" 
-                  message={isSearching ? "搜尋中..." : "更新中..."} 
-                />
+            {isSearching && (
+              <div className="flex justify-center mb-6">
+                <LoadingState variant="inline" message="搜尋中..." />
               </div>
             )}
             
-            {/* 股票列表 */}
-            <StockList 
-              stocks={filteredStocks} 
-              loading={isSearching}
-            />
-            
-            {/* 搜尋無結果提示 - 只有在有股票資料但搜尋無結果時顯示 */}
-            {activeSearchQuery && !isSearching && filteredStocks.length === 0 && allStocks.length > 0 && !loading && !error && (
-              <div className="text-center py-8">
-                <div className="text-muted-foreground text-lg mb-2">
-                  找不到「{activeSearchQuery}」相關的股票
+            {!isSearching && currentQuery && (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="text-sm text-muted-foreground">
+                    找到 {filteredStocks.length} 個結果
+                    {filteredStocks.length === 100 && " (顯示前100筆)"}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleClearSearch}>
+                    清除搜尋
+                  </Button>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  請嘗試其他關鍵字或檢查拼寫
-                </p>
-                <Button variant="outline" onClick={handleClearSearch}>
-                  顯示所有股票
-                </Button>
-              </div>
+                
+                {filteredStocks.length > 0 ? (
+                  <StockList stocks={filteredStocks} />
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-muted-foreground text-lg mb-2">
+                      找不到「{currentQuery}」相關的股票
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      請嘗試其他關鍵字或檢查拼寫
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
 
-        {/* 底部工具欄 */}
-        {!loading && allStocks.length > 0 && (
-          <div className="flex justify-center mt-8">
-            <Button
-              variant="outline"
-              onClick={refreshStocks}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              重新整理數據
-            </Button>
-          </div>
-        )}
-        
-        {/* 空狀態 - 只有在沒有搜尋關鍵字且真的沒有資料時才顯示 */}
-        {!loading && !error && allStocks.length === 0 && !activeSearchQuery && (
+        {!hasSearched && !loading && error && allStocks.length === 0 && (
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">無股票資料</h3>
+            <h3 className="text-lg font-semibold mb-2">載入失敗</h3>
             <p className="text-muted-foreground mb-4">
-              無法從台灣證券交易所獲取股票資料
+              無法載入股票資料，請重試
             </p>
             <Button onClick={handleRetry}>重新載入</Button>
           </div>
         )}
       </div>
       
-      {/* 網路狀態指示器 */}
-      <NetworkStatus />
     </div>
   )
 }

@@ -1,10 +1,18 @@
-import type { Stock } from "@/types/stock"
+import type { Stock, TwseApiResponse, TpexApiResponse } from "@/types/stock"
 
 // API 配置
 const API_CONFIG = {
-  BASE_URL: '/api/twse',
-  ENDPOINTS: {
-    STOCK_DAY_ALL: '/exchangeReport/STOCK_DAY_ALL'
+  TWSE: {
+    BASE_URL: '/api/twse',
+    ENDPOINTS: {
+      STOCK_DAY_ALL: '/exchangeReport/STOCK_DAY_ALL'
+    }
+  },
+  TPEX: {
+    BASE_URL: '/api/tpex',
+    ENDPOINTS: {
+      MAINBOARD_DAILY: '/tpex_mainboard_daily_close_quotes'
+    }
   },
   TIMEOUT: 10000, // 10 秒超時
   RETRY_ATTEMPTS: 3,
@@ -90,10 +98,41 @@ async function fetchWithRetry(
   }
 }
 
-// 股票數據 API 服務
+// 簡化的數據轉換函數
+const transformTwseStock = (stock: TwseApiResponse): Stock => ({
+  date: stock.Date,
+  code: stock.Code,
+  name: stock.Name,
+  closingPrice: stock.ClosingPrice,
+  change: stock.Change,
+  openingPrice: stock.OpeningPrice,
+  highestPrice: stock.HighestPrice,
+  lowestPrice: stock.LowestPrice,
+  tradeVolume: stock.TradeVolume,
+  tradeValue: stock.TradeValue,
+  transaction: stock.Transaction,
+  source: 'twse'
+})
+
+const transformTpexStock = (stock: TpexApiResponse): Stock => ({
+  date: stock.Date,
+  code: stock.SecuritiesCompanyCode,
+  name: stock.CompanyName,
+  closingPrice: stock.Close,
+  change: stock.Change,
+  openingPrice: stock.Open,
+  highestPrice: stock.High,
+  lowestPrice: stock.Low,
+  tradeVolume: stock.TradingShares,
+  tradeValue: stock.TransactionAmount,
+  transaction: stock.TransactionNumber,
+  source: 'tpex'
+})
+
+// 簡化的股票數據 API 服務
 export const stockApi = {
   /**
-   * 獲取所有股票當日交易資料
+   * 獲取所有股票資料（合併上市和上櫃）
    */
   async getAllStocks(): Promise<Stock[]> {
     if (!checkNetworkStatus()) {
@@ -101,16 +140,30 @@ export const stockApi = {
     }
 
     try {
-      const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.STOCK_DAY_ALL}`
-      const response = await fetchWithRetry(url)
-      const data = await response.json()
+      // 並行獲取上市和上櫃股票數據
+      const [twseResult, tpexResult] = await Promise.allSettled([
+        this.fetchTwseStocks(),
+        this.fetchTpexStocks()
+      ])
 
-      // 驗證數據格式
-      if (!Array.isArray(data)) {
-        throw new ApiError('API 返回的數據格式不正確', 0, 'INVALID_DATA')
+      const stocks: Stock[] = []
+
+      // 處理上市股票數據
+      if (twseResult.status === 'fulfilled') {
+        stocks.push(...twseResult.value)
       }
 
-      return data as Stock[]
+      // 處理上櫃股票數據
+      if (tpexResult.status === 'fulfilled') {
+        stocks.push(...tpexResult.value)
+      }
+
+      // 如果兩個 API 都失敗，拋出錯誤
+      if (twseResult.status === 'rejected' && tpexResult.status === 'rejected') {
+        throw new ApiError('無法獲取任何股票資料', 0, 'ALL_APIS_FAILED')
+      }
+
+      return stocks
     } catch (error) {
       if (error instanceof ApiError) {
         throw error
@@ -119,24 +172,30 @@ export const stockApi = {
     }
   },
 
-  /**
-   * 根據股票代號搜尋股票
-   */
-  async searchStocksByCode(codes: string[]): Promise<Stock[]> {
-    const allStocks = await this.getAllStocks()
-    return allStocks.filter(stock => 
-      codes.some(code => stock.Code.includes(code))
-    )
+  // 私有方法：獲取上市股票
+  async fetchTwseStocks(): Promise<Stock[]> {
+    const url = `${API_CONFIG.TWSE.BASE_URL}${API_CONFIG.TWSE.ENDPOINTS.STOCK_DAY_ALL}`
+    const response = await fetchWithRetry(url)
+    const data = await response.json()
+
+    if (!Array.isArray(data)) {
+      throw new ApiError('上市股票 API 數據格式錯誤', 0, 'INVALID_DATA')
+    }
+
+    return data.map(transformTwseStock)
   },
 
-  /**
-   * 根據股票名稱搜尋股票
-   */
-  async searchStocksByName(names: string[]): Promise<Stock[]> {
-    const allStocks = await this.getAllStocks()
-    return allStocks.filter(stock =>
-      names.some(name => stock.Name.includes(name))
-    )
+  // 私有方法：獲取上櫃股票
+  async fetchTpexStocks(): Promise<Stock[]> {
+    const url = `${API_CONFIG.TPEX.BASE_URL}${API_CONFIG.TPEX.ENDPOINTS.MAINBOARD_DAILY}`
+    const response = await fetchWithRetry(url)
+    const data = await response.json()
+
+    if (!Array.isArray(data)) {
+      throw new ApiError('上櫃股票 API 數據格式錯誤', 0, 'INVALID_DATA')
+    }
+
+    return data.map(transformTpexStock)
   }
 }
 

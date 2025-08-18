@@ -1,4 +1,4 @@
-import { useState, memo } from "react"
+import { useState, memo, useCallback } from "react"
 import type { FormEvent, KeyboardEvent } from "react"
 import { Search, X } from "lucide-react"
 
@@ -22,37 +22,36 @@ export const SearchBar = memo(function SearchBar({
 }: SearchBarProps) {
   const [internalQuery, setInternalQuery] = useState("")
   
-  // 使用受控模式或非受控模式
   const isControlled = value !== undefined
   const currentQuery = isControlled ? value : internalQuery
 
-  const handleQueryChange = (newValue: string) => {
+  const handleQueryChange = useCallback((newValue: string) => {
     if (isControlled && onChange) {
       onChange(newValue)
     } else {
       setInternalQuery(newValue)
     }
-  }
+  }, [isControlled, onChange])
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     onSearch(currentQuery.trim())
-  }
+  }, [onSearch, currentQuery])
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     handleQueryChange("")
     onSearch("")
-  }
+  }, [handleQueryChange, onSearch])
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = useCallback((e: FormEvent) => {
     e.preventDefault()
     handleSearch()
-  }
+  }, [handleSearch])
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
-  }
+  }, [handleSearch])
 
   return (
     <form onSubmit={handleSubmit} className="relative w-full max-w-md">
@@ -91,10 +90,17 @@ export const SearchBar = memo(function SearchBar({
         </Button>
       </div>
       
-      {/* 提示文字 */}
       <p className="text-xs text-muted-foreground mt-2 text-center">
         輸入完成後點擊搜尋按鈕或按 Enter 鍵
       </p>
     </form>
+  )
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.disabled === nextProps.disabled &&
+    prevProps.placeholder === nextProps.placeholder &&
+    prevProps.onSearch === nextProps.onSearch &&
+    prevProps.onChange === nextProps.onChange
   )
 })

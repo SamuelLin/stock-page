@@ -21,6 +21,13 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/twse/, ''),
         secure: true,
         followRedirects: true
+      },
+      '/api/tpex': {
+        target: 'https://www.tpex.org.tw/openapi/v1',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/tpex/, ''),
+        secure: true,
+        followRedirects: true
       }
     }
   }
