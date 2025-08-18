@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 
 interface SearchBarProps {
   onSearch: (query: string) => void
+  onClear?: () => void
   placeholder?: string
   disabled?: boolean
   value?: string
@@ -14,7 +15,8 @@ interface SearchBarProps {
 }
 
 export const SearchBar = memo(function SearchBar({ 
-  onSearch, 
+  onSearch,
+  onClear,
   placeholder = "輸入股票代號或名稱...", 
   disabled = false,
   value,
@@ -38,9 +40,13 @@ export const SearchBar = memo(function SearchBar({
   }, [onSearch, currentQuery])
 
   const handleClear = useCallback(() => {
-    handleQueryChange("")
-    onSearch("")
-  }, [handleQueryChange, onSearch])
+    if (onClear) {
+      onClear()
+    } else {
+      handleQueryChange("")
+      onSearch("")
+    }
+  }, [onClear, handleQueryChange, onSearch])
 
   const handleSubmit = useCallback((e: FormEvent) => {
     e.preventDefault()
@@ -101,6 +107,7 @@ export const SearchBar = memo(function SearchBar({
     prevProps.disabled === nextProps.disabled &&
     prevProps.placeholder === nextProps.placeholder &&
     prevProps.onSearch === nextProps.onSearch &&
+    prevProps.onClear === nextProps.onClear &&
     prevProps.onChange === nextProps.onChange
   )
 })

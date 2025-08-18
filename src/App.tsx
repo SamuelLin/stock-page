@@ -90,6 +90,7 @@ function StockApp() {
         <div className="flex justify-center mb-8">
           <SearchBar
             onSearch={handleSearch}
+            onClear={handleClearSearch}
             value={searchInputValue}
             onChange={handleInputChange}
             placeholder="請輸入股票代號或名稱開始搜尋..."
