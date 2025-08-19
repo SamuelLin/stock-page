@@ -199,5 +199,4 @@ export const stockApi = {
   }
 }
 
-// API 狀態類型
-// 已移除未使用的 ApiState 幫手型別/函式，若日後需要可從版本控制恢復
+//

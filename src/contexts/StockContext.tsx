@@ -26,9 +26,22 @@ export function StockProvider({ children }: { children: ReactNode }): JSX.Elemen
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isFromCache, setIsFromCache] = useState(false)
 
-  const fetchStocks = useCallback(async (skipCache = false) => {
-    if (loading) return
-    
+  // 單一路徑載入流程，供 fetch 與 ensure 共用
+  const loadStocks = useCallback(async (
+    options?: { skipCache?: boolean; onlyIfEmpty?: boolean }
+  ): Promise<Stock[]> => {
+    const { skipCache = false, onlyIfEmpty = false } = options || {}
+
+    // 僅在需要時載入（ensure 模式）
+    if (onlyIfEmpty && stocks.length > 0) {
+      return stocks
+    }
+
+    // 若已在載入中，直接回傳現有資料避免重入
+    if (loading) {
+      return stocks
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -40,72 +53,43 @@ export function StockProvider({ children }: { children: ReactNode }): JSX.Elemen
           const timestamp = cache.get<number>('stocks_timestamp')
           setLastUpdated(timestamp ? new Date(timestamp) : null)
           setIsFromCache(true)
-          setLoading(false)
-          return
+          return cachedData
         }
       }
 
       const data = await stockApi.getAllStocks()
       setStocks(data)
-      
       const now = Date.now()
       cache.set('stocks', data)
       cache.set('stocks_timestamp', now)
       setLastUpdated(new Date(now))
       setIsFromCache(false)
-
+      return data
     } catch (err) {
       setError(err instanceof Error ? err.message : '獲取股票資料失敗')
+      throw err
     } finally {
       setLoading(false)
     }
-  }, [loading])
+  }, [stocks, loading])
+
+  const fetchStocks = useCallback(async () => {
+    await loadStocks({ skipCache: false, onlyIfEmpty: false })
+  }, [loadStocks])
 
   const refreshStocks = useCallback(async () => {
     cache.delete('stocks')
     cache.delete('stocks_timestamp')
-    await fetchStocks(true)
-  }, [fetchStocks])
+    await loadStocks({ skipCache: true, onlyIfEmpty: false })
+  }, [loadStocks])
 
   const clearError = useCallback(() => {
     setError(null)
   }, [])
 
   const ensureStocksLoaded = useCallback(async (): Promise<Stock[]> => {
-    if (stocks.length === 0 && !loading) {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const cachedData = cache.get<Stock[]>('stocks')
-        if (cachedData) {
-          setStocks(cachedData)
-          const timestamp = cache.get<number>('stocks_timestamp')
-          setLastUpdated(timestamp ? new Date(timestamp) : null)
-          setIsFromCache(true)
-          setLoading(false)
-          return cachedData
-        }
-
-        const data = await stockApi.getAllStocks()
-        setStocks(data)
-        
-        const now = Date.now()
-        cache.set('stocks', data)
-        cache.set('stocks_timestamp', now)
-        setLastUpdated(new Date(now))
-        setIsFromCache(false)
-        setLoading(false)
-        
-        return data
-      } catch (err) {
-        setError(err instanceof Error ? err.message : '獲取股票資料失敗')
-        setLoading(false)
-        throw err
-      }
-    }
-    return stocks
-  }, [stocks, loading])
+    return loadStocks({ skipCache: false, onlyIfEmpty: true })
+  }, [loadStocks])
 
   const contextValue = useMemo(() => ({
     stocks,
