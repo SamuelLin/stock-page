@@ -24,8 +24,7 @@ export function StockProvider({ children }: { children: ReactNode }): JSX.Elemen
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-
-  const isFromCache = cache.has('stocks')
+  const [isFromCache, setIsFromCache] = useState(false)
 
   const fetchStocks = useCallback(async (skipCache = false) => {
     if (loading) return
@@ -40,6 +39,7 @@ export function StockProvider({ children }: { children: ReactNode }): JSX.Elemen
           setStocks(cachedData)
           const timestamp = cache.get<number>('stocks_timestamp')
           setLastUpdated(timestamp ? new Date(timestamp) : null)
+          setIsFromCache(true)
           setLoading(false)
           return
         }
@@ -52,6 +52,7 @@ export function StockProvider({ children }: { children: ReactNode }): JSX.Elemen
       cache.set('stocks', data)
       cache.set('stocks_timestamp', now)
       setLastUpdated(new Date(now))
+      setIsFromCache(false)
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '獲取股票資料失敗')
@@ -81,6 +82,7 @@ export function StockProvider({ children }: { children: ReactNode }): JSX.Elemen
           setStocks(cachedData)
           const timestamp = cache.get<number>('stocks_timestamp')
           setLastUpdated(timestamp ? new Date(timestamp) : null)
+          setIsFromCache(true)
           setLoading(false)
           return cachedData
         }
@@ -92,6 +94,7 @@ export function StockProvider({ children }: { children: ReactNode }): JSX.Elemen
         cache.set('stocks', data)
         cache.set('stocks_timestamp', now)
         setLastUpdated(new Date(now))
+        setIsFromCache(false)
         setLoading(false)
         
         return data

@@ -1,4 +1,4 @@
-import { useState, memo, useCallback } from "react"
+import { memo, useCallback } from "react"
 import type { FormEvent, KeyboardEvent } from "react"
 import { Search, X } from "lucide-react"
 
@@ -10,8 +10,8 @@ interface SearchBarProps {
   onClear?: () => void
   placeholder?: string
   disabled?: boolean
-  value?: string
-  onChange?: (value: string) => void
+  value: string
+  onChange: (value: string) => void
 }
 
 export const SearchBar = memo(function SearchBar({ 
@@ -22,18 +22,11 @@ export const SearchBar = memo(function SearchBar({
   value,
   onChange
 }: SearchBarProps) {
-  const [internalQuery, setInternalQuery] = useState("")
-  
-  const isControlled = value !== undefined
-  const currentQuery = isControlled ? value : internalQuery
+  const currentQuery = value
 
   const handleQueryChange = useCallback((newValue: string) => {
-    if (isControlled && onChange) {
-      onChange(newValue)
-    } else {
-      setInternalQuery(newValue)
-    }
-  }, [isControlled, onChange])
+    onChange(newValue)
+  }, [onChange])
 
   const handleSearch = useCallback(() => {
     onSearch(currentQuery.trim())
@@ -100,14 +93,5 @@ export const SearchBar = memo(function SearchBar({
         輸入完成後點擊搜尋按鈕或按 Enter 鍵
       </p>
     </form>
-  )
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.value === nextProps.value &&
-    prevProps.disabled === nextProps.disabled &&
-    prevProps.placeholder === nextProps.placeholder &&
-    prevProps.onSearch === nextProps.onSearch &&
-    prevProps.onClear === nextProps.onClear &&
-    prevProps.onChange === nextProps.onChange
   )
 })

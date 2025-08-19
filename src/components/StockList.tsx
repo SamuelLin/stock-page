@@ -2,12 +2,10 @@ import { memo } from "react"
 import type { Stock } from "@/types/stock"
 import { LoadingState } from "./LoadingState"
 
-const StockItem = memo(function StockItem({ stock, index }: { stock: Stock; index: number }) {
+const StockItem = memo(function StockItem({ stock }: { stock: Stock }) {
+  const changeNumber = stock.change ? parseFloat(stock.change) : NaN
   return (
-    <div 
-      key={`${stock.code}-${stock.date}-${index}`}
-      className="bg-card rounded-lg border p-4 hover:bg-accent/50 transition-colors"
-    >
+    <div className="bg-card rounded-lg border p-4 hover:bg-accent/50 transition-colors">
       <div className="hidden sm:flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div>
@@ -32,14 +30,14 @@ const StockItem = memo(function StockItem({ stock, index }: { stock: Stock; inde
           </div>
           
           <div className={`w-24 ml-4 ${
-            stock.change && parseFloat(stock.change) > 0 
-              ? 'text-red-600' 
-              : stock.change && parseFloat(stock.change) < 0 
-                ? 'text-green-600' 
+            !Number.isNaN(changeNumber) && changeNumber > 0
+              ? 'text-red-600'
+              : !Number.isNaN(changeNumber) && changeNumber < 0
+                ? 'text-green-600'
                 : 'text-muted-foreground'
           }`}>
             <div className="font-mono">
-              {stock.change ? (parseFloat(stock.change) > 0 ? '+' : '') + parseFloat(stock.change).toFixed(2) : '--'}
+              {stock.change ? (changeNumber > 0 ? '+' : '') + changeNumber.toFixed(2) : '--'}
             </div>
             <div className="text-xs text-muted-foreground">
               漲跌
@@ -73,18 +71,18 @@ const StockItem = memo(function StockItem({ stock, index }: { stock: Stock; inde
             </div>
             <div className="text-sm text-muted-foreground">{stock.name}</div>
           </div>
-          <div className="text-right">
-            <div className="text-lg font-mono">{stock.closingPrice || '--'}</div>
-            <div className={`text-sm font-mono ${
-              stock.change && parseFloat(stock.change) > 0 
-                ? 'text-red-600' 
-                : stock.change && parseFloat(stock.change) < 0 
-                  ? 'text-green-600' 
-                  : 'text-muted-foreground'
-            }`}>
-              {stock.change ? (parseFloat(stock.change) > 0 ? '+' : '') + parseFloat(stock.change).toFixed(2) : '--'}
+            <div className="text-right">
+              <div className="text-lg font-mono">{stock.closingPrice || '--'}</div>
+              <div className={`text-sm font-mono ${
+                !Number.isNaN(changeNumber) && changeNumber > 0
+                  ? 'text-red-600'
+                  : !Number.isNaN(changeNumber) && changeNumber < 0
+                    ? 'text-green-600'
+                    : 'text-muted-foreground'
+              }`}>
+                {stock.change ? (changeNumber > 0 ? '+' : '') + changeNumber.toFixed(2) : '--'}
+              </div>
             </div>
-          </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -126,8 +124,8 @@ export const StockList = memo(function StockList({ stocks, loading = false }: St
 
   return (
     <div className="space-y-3">
-      {stocks.map((stock, index) => (
-        <StockItem key={`${stock.code}-${stock.date}-${index}`} stock={stock} index={index} />
+        {stocks.map((stock, index) => (
+          <StockItem key={`${stock.code}-${stock.date}-${index}`} stock={stock} />
       ))}
     </div>
   )

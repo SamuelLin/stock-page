@@ -200,17 +200,4 @@ export const stockApi = {
 }
 
 // API 狀態類型
-export type ApiState<T> = {
-  data: T | null
-  loading: boolean
-  error: ApiError | null
-  lastUpdated: Date | null
-}
-
-// 創建初始 API 狀態
-export const createInitialApiState = <T>(): ApiState<T> => ({
-  data: null,
-  loading: false,
-  error: null,
-  lastUpdated: null,
-})
+// 已移除未使用的 ApiState 幫手型別/函式，若日後需要可從版本控制恢復

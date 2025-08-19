@@ -1,4 +1,4 @@
-import { memo } from 'react'
+ 
 import { Loader2, TrendingUp } from 'lucide-react'
 
 interface LoadingStateProps {
@@ -7,7 +7,7 @@ interface LoadingStateProps {
   className?: string
 }
 
-export const LoadingState = memo(function LoadingState({ 
+export function LoadingState({ 
   message = '載入中...', 
   variant = 'default',
   className 
@@ -33,4 +33,4 @@ export const LoadingState = memo(function LoadingState({
       <p className="mt-1 text-sm text-muted-foreground">正在從台灣證券交易所獲取最新數據...</p>
     </div>
   )
-})
+}
