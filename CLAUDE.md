@@ -9,7 +9,7 @@ This is a Taiwan Stock Market Information System that provides real-time stock d
 ### Key Features
 - **Unified Stock Search**: Search across both TWSE (上市) and TPEx (上櫃) stocks
 - **Manual Search Mode**: Search-first UX pattern with manual trigger (button/Enter key)
-- **Performance Optimized**: Cached search results, React.memo optimizations, efficient filtering
+- **Performance Optimized**: Context/API caching, selective memoization, efficient filtering
 - **Responsive Design**: Mobile-first approach with adaptive layouts
 - **Real-time Data**: Direct API integration with Taiwan stock exchanges
 
@@ -36,7 +36,7 @@ This is a Taiwan Stock Market Information System that provides real-time stock d
 - **Icons**: Lucide React
 - **Linting**: ESLint with TypeScript and React plugins
 - **State Management**: React Context API with optimized providers
-- **Performance**: React.memo, useCallback, useMemo for optimization
+- **Performance**: Selective React.memo, useCallback, useMemo
 
 ### Directory Structure
 ```
@@ -45,7 +45,7 @@ src/
 │   ├── ui/              # shadcn/ui components (Button, Input, etc.)
 │   ├── SearchBar.tsx    # Search input with manual trigger
 │   ├── StockList.tsx    # Optimized stock display component
-│   ├── LoadingState.tsx # Loading states with variants
+│   ├── LoadingState.tsx # Loading states (default/inline)
 │   └── ErrorBoundary.tsx # Error handling component
 ├── contexts/
 │   └── StockContext.tsx # Unified stock data management
@@ -92,22 +92,20 @@ src/
 ### Performance Optimizations
 
 #### React Optimizations
-- **React.memo**: All components wrapped with memo for shallow comparison
-- **useCallback**: All event handlers and functions memoized
-- **useMemo**: Expensive calculations (search results, stats) cached
-- **Custom memo comparisons**: SearchBar uses custom comparison for optimal re-renders
+- **Selective memoization**: `StockItem` memoized; other UI components avoid premature memo
+- **Stable callbacks**: Event handlers wrapped with `useCallback`
+- **Derived values**: Use `useMemo` for lightweight computed stats
 
 #### Search Optimizations
-- **Search Cache**: Map-based caching with size limits (50 entries)
 - **Manual Trigger**: Search only executes on button click or Enter key
 - **Efficient Filtering**: Uses for-loop instead of array methods for better performance
 - **Result Limiting**: Maximum 100 results to prevent UI lag
 - **Priority Matching**: Exact matches > starts with > contains
 
 #### Context Optimizations
+- **Unified loader**: Single `loadStocks` path (cache-first, then API) used by fetch/refresh/ensure
 - **Memoized Context Value**: Prevents unnecessary provider re-renders
-- **Stable Function References**: All context functions use useCallback
-- **Lazy Loading**: Stock data loaded only when needed
+- **Stable Function References**: All context functions use `useCallback`
 
 ### TypeScript Architecture
 
