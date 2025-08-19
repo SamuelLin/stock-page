@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react"
+import { memo } from "react"
 import type { FormEvent, KeyboardEvent } from "react"
 import { Search, X } from "lucide-react"
 
@@ -24,33 +24,33 @@ export const SearchBar = memo(function SearchBar({
 }: SearchBarProps) {
   const currentQuery = value
 
-  const handleQueryChange = useCallback((newValue: string) => {
+  const handleQueryChange = (newValue: string) => {
     onChange(newValue)
-  }, [onChange])
+  }
 
-  const handleSearch = useCallback(() => {
+  const handleSearch = () => {
     onSearch(currentQuery.trim())
-  }, [onSearch, currentQuery])
+  }
 
-  const handleClear = useCallback(() => {
+  const handleClear = () => {
     if (onClear) {
       onClear()
     } else {
       handleQueryChange("")
       onSearch("")
     }
-  }, [onClear, handleQueryChange, onSearch])
+  }
 
-  const handleSubmit = useCallback((e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     handleSearch()
-  }, [handleSearch])
+  }
 
-  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
-  }, [handleSearch])
+  }
 
   return (
     <form onSubmit={handleSubmit} className="relative w-full max-w-md">
